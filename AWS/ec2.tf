@@ -38,7 +38,7 @@ resource "aws_instance" "ec2" {
   }
 
   provisioner "local-exec" {
-    command = "scp -o StrictHostKeyChecking=no -i ${var.private_key_file} ubuntu@${aws_instance.ec2.public_ip}:/etc/wireguard/client.cond ${var.client_config_path}/${var.client_config_name}.conf"
+    command = "scp -o StrictHostKeyChecking=no -i ${var.private_key_file} ubuntu@${aws_instance.ec2.public_ip}:/etc/wireguard/client.conf ${var.client_config_path}/${var.client_config_name}.conf"
   }
 
   provisioner "remote-exec" {
@@ -70,7 +70,7 @@ data "template_file" "deployment_shell_script" {
   template = file("userdata.sh")
 
   vars = {
-    client_config_name = var.client_config_name
+    myip = chomp(data.http.myip.body)
   }
 }
 

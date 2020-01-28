@@ -8,7 +8,7 @@ echo "Reset DNS settings ..."
 
 echo "supersede domain-name-servers 1.1.1.1, 9.9.9.9;" >> /etc/dhcp/dhclient.conf
 
-dhclient -r -v ${INTERFACE} && rm /var/lib/dhcp/dhclient.* ; dhclient -v ${INTERFACE}
+dhclient -r -v $INTERFACE && rm /var/lib/dhcp/dhclient.* ; dhclient -v $INTERFACE
 
 echo "Installing required packages ..."
 apt install software-properties-common -y
@@ -43,12 +43,12 @@ echo "# START WIREGUARD RULES
 # NAT table rules
 *nat
 :POSTROUTING ACCEPT [0:0]
-# Allow traffic from Wireguard client to ${INTERFACE}
--A POSTROUTING -s 192.168.51.0/24 -o ${INTERFACE}
+# Allow traffic from Wireguard client to $INTERFACE
+-A POSTROUTING -s 192.168.51.0/24 -o $INTERFACE
 COMMIT
-# END WIREGUARD RULES" | cat - /etc/ufw/before.rules > ${TMPFILE}
+# END WIREGUARD RULES" | cat - /etc/ufw/before.rules > $TMPFILE
 
-mv -f ${TMPFILE} /etc/ufw/before.rules
+mv -f $TMPFILE /etc/ufw/before.rules
 
 sed -i.bak s/DEFAULT_FORWARD_POLICY=\"DROP\"/DEFAULT_FORWARD_POLICY=\"ACCEPT\"/g /etc/default/ufw
 
@@ -62,17 +62,17 @@ sysctl -w net.ipv4.ip_forward=1
 echo "Creating keys..."
 
 PRIVATE_KEY=$(wg genkey)
-PUBLIC_KEY=$(echo ${PRIVATE_KEY} | wg pubkey)
+PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
 
 echo "Configuring Wireguard..."
 
 cat > /etc/wireguard/wg0.conf <<EOF
 [Interface]
-PrivateKey = ${PRIVATE_KEY}
+PrivateKey = $PRIVATE_KEY
 Address = 192.168.51.1/24
 ListenPort = 51820
-PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o ${INTERFACE} -j MASQUERADE; ip6tables -A FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -A POSTROUTING -o ${INTERFACE} -j MASQUERADE
-PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o ${INTERFACE} -j MASQUERADE; ip6tables -D FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -D POSTROUTING -o ${INTERFACE} -j MASQUERADE
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE; ip6tables -A FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE; ip6tables -D FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE
 SaveConfig = true
 EOF
 
@@ -89,7 +89,7 @@ PrivateKey = <PRIVATE KEY GENERATED ON CLIENT SYSTEM>
 Address = <YOUR LOCAL IP HERE>
 
 [Peer]
-PublicKey = ${PUBLIC_KEY}
+PublicKey = $PUBLIC_KEY
 Endpoint = $(curl http://169.254.169.254/latest/meta-data/public-ipv4):51820
 AllowedIPs = <YOUR LOCAL IP HERE>
 EOF
@@ -97,3 +97,5 @@ EOF
 chmod 444 /etc/wireguard/client.conf
 
 echo "DONE!"
+
+exit 0
