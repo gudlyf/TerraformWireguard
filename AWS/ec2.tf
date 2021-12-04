@@ -3,10 +3,10 @@ data "aws_ami" "ubuntu" {
 
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"]
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
   }
 
-  owners = ["099720109477"]
+  owners = ["099720109477"] # Amazon
 }
 
 resource "aws_instance" "ec2" {
@@ -56,10 +56,10 @@ resource "aws_instance" "ec2" {
     }
   }
 
-  provisioner "local-exec" {
-    command = "rm -f ${var.client_config_path}/${var.client_config_name}.conf"
-    when    = destroy
-  }
+#  provisioner "local-exec" {
+#    command = "rm -f ${var.client_config_path}/${var.client_config_name}.conf"
+#    when    = destroy
+#  }
 
   tags = {
     Name = "wireguard"

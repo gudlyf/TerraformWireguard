@@ -1,4 +1,7 @@
-#!/bin/bash -x
+#!/usr/bin/env bash -x
+
+apt update
+apt install -y net-tools
 
 INTERFACE=$(route | grep '^default' | grep -o '[^ ]*$')
 
@@ -61,19 +64,25 @@ sysctl -w net.ipv4.ip_forward=1
 
 echo "Creating keys..."
 
-PRIVATE_KEY=$(wg genkey)
-PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
+SERVER_PRIVATE_KEY=$(wg genkey)
+SERVER_PUBLIC_KEY=$(echo $SERVER_PRIVATE_KEY | wg pubkey)
+CLIENT_PRIVATE_KEY=$(wg genkey)
+CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 
 echo "Configuring Wireguard..."
 
 cat > /etc/wireguard/wg0.conf <<EOF
 [Interface]
-PrivateKey = $PRIVATE_KEY
+PrivateKey = $SERVER_PRIVATE_KEY
 Address = 192.168.51.1/24
 ListenPort = 51820
 PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE; ip6tables -A FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE; ip6tables -D FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -D POSTROUTING -o $INTERFACE -j MASQUERADE
 SaveConfig = true
+
+[Peer]
+PublicKey = $CLIENT_PUBLIC_KEY
+AllowedIPs = 192.168.51.2/32
 EOF
 
 echo "Enabling and starting Wireguard service ..."
@@ -85,16 +94,19 @@ echo "Creating client file template ..."
 
 cat > /etc/wireguard/client.conf <<EOF
 [Interface]
-PrivateKey = <PRIVATE KEY GENERATED ON CLIENT SYSTEM>
-Address = <YOUR LOCAL IP HERE>
+PrivateKey = $CLIENT_PRIVATE_KEY
+Address = 192.168.51.2/32
+DNS = 1.1.1.1, 9.9.9.9
 
 [Peer]
-PublicKey = $PUBLIC_KEY
+PublicKey = $SERVER_PUBLIC_KEY
 Endpoint = $(curl http://169.254.169.254/latest/meta-data/public-ipv4):51820
-AllowedIPs = <YOUR LOCAL IP HERE>
+AllowedIPs = 0.0.0.0/0, ::/0
 EOF
 
-chmod 444 /etc/wireguard/client.conf
+# Set readable so provisioner can download
+chmod 655 /etc/wireguard
+chmod 644 /etc/wireguard/client.conf
 
 echo "DONE!"
 
